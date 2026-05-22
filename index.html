@@ -10,11 +10,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>OFSタイムカード</title>
   <style>
-    body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-    iframe { width: 100%; height: 100%; border: none; }
+    body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #fff; }
+    iframe { width: 100%; height: 100%; border: none; display: block; }
   </style>
 </head>
 <body>
-  <iframe src="https://script.google.com/macros/s/AKfycbyeGboA0FpQkae61xRGeb7kWTxUWIm-BEPa3FKn2hPsejiIdT3EeBOQnaHvIl8nMV6MXA/exec?s=%E7%9C%9F%E5%85%B5%E8%A1%9B"></iframe>
+
+  <iframe id="timecard-frame" src="" allow="geolocation"></iframe>
+
+  <script>
+    window.onload = function() {
+      // 1. GitHub PagesのURLから「?s=〇〇」の店舗名を取得
+      const urlParams = new URLSearchParams(window.location.search);
+      let storeName = urlParams.get('s');
+
+      // 2. 基本となるGASのウェブアプリURL
+      const gasBaseUrl = "https://script.google.com/macros/s/AKfycbyeGboA0FpQkae61xRGeb7kWTxUWIm-BEPa3FKn2hPsejiIdT3EeBOQnaHvIl8nMV6MXA/exec";
+
+      // 3. 店舗パラメータがあればURLに結合、なければそのまま
+      const iframeSrc = storeName ? `${gasBaseUrl}?s=${encodeURIComponent(storeName)}` : gasBaseUrl;
+
+      // 4. iframeにURLをセットして表示
+      document.getElementById('timecard-frame').src = iframeSrc;
+    };
+  </script>
+
 </body>
 </html>
