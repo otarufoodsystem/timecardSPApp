@@ -15,57 +15,6 @@
   </style>
 </head>
 <body>
-
-  <iframe id="timecard-frame" src="" allow="geolocation"></iframe>
-
-  <script>
-    window.onload = function() {
-      const urlParams = new URLSearchParams(window.location.search);
-      let storeName = urlParams.get('s');
-      const gasBaseUrl = "https://script.google.com/macros/s/AKfycbxgoSywEgIfcMIAv3V4VF1YvBM8ske7OoXyRZhIPnvEkcVpeSX7HE9hkt1NPiGDKr_ldQ/exec";
-      const iframeSrc = storeName ? `${gasBaseUrl}?s=${encodeURIComponent(storeName)}` : gasBaseUrl;
-      document.getElementById('timecard-frame').src = iframeSrc;
-    };
-
-    window.addEventListener('message', function(event) {
-      if (!event.data || !event.data.type) return;
-
-      const iframe = document.getElementById('timecard-frame');
-
-      try {
-        if (event.data.type === 'REQUEST_USER') {
-          const savedStore = localStorage.getItem('ofs_saved_store') || "";
-          const savedStaff = localStorage.getItem('ofs_saved_staff') || "";
-          if (iframe && iframe.contentWindow) {
-            iframe.contentWindow.postMessage({
-              type: 'RESTORE_USER',
-              store: savedStore,
-              staff: savedStaff
-            }, '*');
-          }
-        } else if (event.data.type === 'SAVE_USER') {
-          if (event.data.store !== undefined) {
-            localStorage.setItem('ofs_saved_store', event.data.store);
-          }
-          if (event.data.staff !== undefined) {
-            localStorage.setItem('ofs_saved_staff', event.data.staff);
-          }
-          // 保存直後に本当に書き込めたか読み出してGAS側へ通知
-          const checkStaff = localStorage.getItem('ofs_saved_staff');
-          if (iframe && iframe.contentWindow) {
-            iframe.contentWindow.postMessage({
-              type: 'SAVE_CONFIRMED',
-              savedStaff: checkStaff
-            }, '*');
-          }
-        } else if (event.data.type === 'CLEAR_STAFF') {
-          localStorage.removeItem('ofs_saved_staff');
-        }
-      } catch (e) {
-        alert("親画面Storageエラー: " + e.message);
-      }
-    });
-  </script>
-
+  <iframe id="timecard-frame" src="https://script.google.com/macros/s/AKfycbwGZ8B_odEXiHDkxrrPChHuBEWYVRswBtPAqYJSgiKEAxZmaqhLdJk7k1_QoCLOk8kDIw/exec" allow="geolocation"></iframe>
 </body>
 </html>
