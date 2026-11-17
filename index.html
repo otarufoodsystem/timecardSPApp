@@ -16,36 +16,22 @@
 </head>
 <body>
 
-  <!-- iframeのURLは常に「パラメータなしの固定URL」にする -->
-  <iframe id="timecard-frame" src="https://script.google.com/macros/s/AKfycbyMf2HNrRsDznKmx6vzVBcgvihoq2MYvdA7P0HVX6DXPN9hh3rY24y-rajsw8zE8pDbfA/exec" allow="geolocation"></iframe>
+  <iframe id="timecard-frame" src="" allow="geolocation"></iframe>
 
   <script>
     window.onload = function() {
+      // 1. GitHub PagesのURLから「?s=〇〇」の店舗名を取得
       const urlParams = new URLSearchParams(window.location.search);
-      let storeNameFromUrl = urlParams.get('s');
+      let storeName = urlParams.get('s');
 
-      let targetStore = "";
+      // 2. 基本となるGASのウェブアプリURL
+      const gasBaseUrl = "https://script.google.com/macros/s/AKfycbyMf2HNrRsDznKmx6vzVBcgvihoq2MYvdA7P0HVX6DXPN9hh3rY24y-rajsw8zE8pDbfA/exec";
 
-      if (storeNameFromUrl) {
-        // URLに店舗名があれば、GitHub Pages側の localStorage に保存
-        targetStore = decodeURIComponent(storeNameFromUrl).trim();
-        try {
-          localStorage.setItem('gh_saved_store_name', targetStore);
-        } catch(e) {}
-      } else {
-        // URLにない場合は、前回保存した店舗名を復元
-        try {
-          targetStore = localStorage.getItem('gh_saved_store_name') || "";
-        } catch(e) {}
-      }
+      // 3. 店舗パラメータがあればURLに結合、なければそのまま
+      const iframeSrc = storeName ? `${gasBaseUrl}?s=${encodeURIComponent(storeName)}` : gasBaseUrl;
 
-      // iframeの読み込みが完了したら、GAS側に店舗名を送信する
-      const iframe = document.getElementById('timecard-frame');
-      iframe.onload = function() {
-        if (targetStore) {
-          iframe.contentWindow.postMessage({ storeName: targetStore }, '*');
-        }
-      };
+      // 4. iframeにURLをセットして表示
+      document.getElementById('timecard-frame').src = iframeSrc;
     };
   </script>
 
