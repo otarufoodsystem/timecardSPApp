@@ -20,48 +20,49 @@
 
   <script>
     window.onload = function() {
-      // 1. GitHub PagesのURLから「?s=〇〇」の店舗名を取得（URLは固定仕様のまま）
       const urlParams = new URLSearchParams(window.location.search);
       let storeName = urlParams.get('s');
-
-      // 2. 基本となるGASのウェブアプリURL
-      const gasBaseUrl = "https://script.google.com/macros/s/AKfycbzxCJU9lqKemrO0MrLyEQh8bFbfpNZeVeJzGjMvx1wsx2j82RZjt6mKtuKxtMYWjhxLMg/exec";
-
-      // 3. 店舗パラメータがあればURLに結合、なければそのまま
+      const gasBaseUrl = "https://script.google.com/macros/s/AKfycbxgoSywEgIfcMIAv3V4VF1YvBM8ske7OoXyRZhIPnvEkcVpeSX7HE9hkt1NPiGDKr_ldQ/exec";
       const iframeSrc = storeName ? `${gasBaseUrl}?s=${encodeURIComponent(storeName)}` : gasBaseUrl;
-
-      // 4. iframeにURLをセットして表示
       document.getElementById('timecard-frame').src = iframeSrc;
     };
 
-    // GAS側（iframe内）とのデータ受け渡し処理
     window.addEventListener('message', function(event) {
       if (!event.data || !event.data.type) return;
 
       const iframe = document.getElementById('timecard-frame');
 
-      if (event.data.type === 'REQUEST_USER') {
-        // GAS側の準備ができたら、保存してある店舗名・スタッフ名を返信する
-        const savedStore = localStorage.getItem('ofs_saved_store') || "";
-        const savedStaff = localStorage.getItem('ofs_saved_staff') || "";
-        if (iframe && iframe.contentWindow) {
-          iframe.contentWindow.postMessage({
-            type: 'RESTORE_USER',
-            store: savedStore,
-            staff: savedStaff
-          }, '*');
+      try {
+        if (event.data.type === 'REQUEST_USER') {
+          const savedStore = localStorage.getItem('ofs_saved_store') || "";
+          const savedStaff = localStorage.getItem('ofs_saved_staff') || "";
+          if (iframe && iframe.contentWindow) {
+            iframe.contentWindow.postMessage({
+              type: 'RESTORE_USER',
+              store: savedStore,
+              staff: savedStaff
+            }, '*');
+          }
+        } else if (event.data.type === 'SAVE_USER') {
+          if (event.data.store !== undefined) {
+            localStorage.setItem('ofs_saved_store', event.data.store);
+          }
+          if (event.data.staff !== undefined) {
+            localStorage.setItem('ofs_saved_staff', event.data.staff);
+          }
+          // 保存直後に本当に書き込めたか読み出してGAS側へ通知
+          const checkStaff = localStorage.getItem('ofs_saved_staff');
+          if (iframe && iframe.contentWindow) {
+            iframe.contentWindow.postMessage({
+              type: 'SAVE_CONFIRMED',
+              savedStaff: checkStaff
+            }, '*');
+          }
+        } else if (event.data.type === 'CLEAR_STAFF') {
+          localStorage.removeItem('ofs_saved_staff');
         }
-      } else if (event.data.type === 'SAVE_USER') {
-        // 選択された店舗名・スタッフ名をGitHub Pages側に保存
-        if (event.data.store !== undefined) {
-          localStorage.setItem('ofs_saved_store', event.data.store);
-        }
-        if (event.data.staff !== undefined) {
-          localStorage.setItem('ofs_saved_staff', event.data.staff);
-        }
-      } else if (event.data.type === 'CLEAR_STAFF') {
-        // 「変更」が押されたらスタッフ名を削除
-        localStorage.removeItem('ofs_saved_staff');
+      } catch (e) {
+        alert("親画面Storageエラー: " + e.message);
       }
     });
   </script>
