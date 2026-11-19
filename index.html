@@ -16,23 +16,105 @@
 </head>
 <body>
 
-  <iframe id="timecard-frame" src="" allow="geolocation"></iframe>
+  <iframe id="timecard-frame" src="https://script.google.com/macros/s/AKfycbxVIymLlwFHqo-vnJlPTGURPNJ8c0GHdKaZ61Y6DG_Rb5QMdThD3Gy3nv_hY3JWCcl1LQ/exec" allow="geolocation"></iframe>
 
   <script>
-    window.onload = function() {
-      // 1. GitHub PagesのURLから「?s=〇〇」の店舗名を取得
+    const gasBaseUrl = "https://script.google.com/macros/s/AKfycbxVIymLlwFHqo-vnJlPTGURPNJ8c0GHdKaZ61Y6DG_Rb5QMdThD3Gy3nv_hY3JWCcl1LQ/exec";
+
+    function getCookieValue(name) {
+      if (!document.cookie) return '';
+      const prefix = name + '=';
+      const parts = document.cookie.split(';');
+      for (let i = 0; i < parts.length; i++) {
+        const c = parts[i].trim();
+        if (c.indexOf(prefix) === 0) {
+          return decodeURIComponent(c.substring(prefix.length));
+        }
+      }
+      return '';
+    }
+
+    function setCookieValue(name, value, maxAgeSec) {
+      try {
+        document.cookie = name + '=' + encodeURIComponent(value) + '; max-age=' + maxAgeSec + '; path=/; SameSite=Lax';
+      } catch (e) {}
+    }
+
+    function getOrCreateDeviceId() {
+      let id = '';
+      try {
+        id = (localStorage.getItem('ofs_device_id') || '').trim();
+      } catch (e) {}
+
+      if (!id) {
+        id = (getCookieValue('ofs_device_id') || '').trim();
+      }
+
+      if (!id) {
+        id = 'dev_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 10);
+      }
+
+      try {
+        localStorage.setItem('ofs_device_id', id);
+      } catch (e) {}
+      setCookieValue('ofs_device_id', id, 31536000);
+
+      return id;
+    }
+
+    function resolveStoreName() {
       const urlParams = new URLSearchParams(window.location.search);
-      let storeName = urlParams.get('s');
+      const fromUrl = urlParams.get('s');
+      let store = '';
 
-      // 2. 基本となるGASのウェブアプリURL
-      const gasBaseUrl = "https://script.google.com/macros/s/AKfycbw-hsg9KSN50-GyRKtulVzzS5vW5-C4wMTmvGuWOPb3zwIff5OcbLdNhXCke_qsbwFLoA/exec";
+      if (fromUrl) {
+        store = decodeURIComponent(fromUrl).trim();
+        try {
+          localStorage.setItem('gh_saved_store_name', store);
+        } catch (e) {}
+        setCookieValue('ofs_store_name', store, 31536000);
+      } else {
+        try {
+          store = (localStorage.getItem('gh_saved_store_name') || '').trim();
+        } catch (e) {}
+        if (!store) {
+          store = (getCookieValue('ofs_store_name') || '').trim();
+        }
+      }
+      return store;
+    }
 
-      // 3. 店舗パラメータがあればURLに結合、なければそのまま
-      const iframeSrc = storeName ? `${gasBaseUrl}?s=${encodeURIComponent(storeName)}` : gasBaseUrl;
+    const deviceId = getOrCreateDeviceId();
+    const targetStore = resolveStoreName();
 
-      // 4. iframeにURLをセットして表示
-      document.getElementById('timecard-frame').src = iframeSrc;
-    };
+    function sendInitToIframe() {
+      const iframe = document.getElementById('timecard-frame');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({
+          type: 'OFS_INIT',
+          storeName: targetStore,
+          deviceId: deviceId
+        }, '*');
+      }
+    }
+
+    window.addEventListener('message', function(event) {
+      if (event.data && event.data.type === 'OFS_READY') {
+        sendInitToIframe();
+      }
+    });
+
+    window.addEventListener('DOMContentLoaded', function() {
+      const iframe = document.getElementById('timecard-frame');
+      if (iframe && iframe.src !== gasBaseUrl) {
+        iframe.src = gasBaseUrl;
+      }
+      if (iframe) {
+        iframe.addEventListener('load', function() {
+          sendInitToIframe();
+        });
+      }
+    });
   </script>
 
 </body>
