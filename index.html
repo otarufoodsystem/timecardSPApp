@@ -16,22 +16,83 @@
 </head>
 <body>
 
-  <iframe id="timecard-frame" src="" allow="geolocation"></iframe>
+  <iframe id="timecard-frame" src="https://script.google.com/macros/s/AKfycbyysNNyoaHcpFM4FBOiO24mr_3QcUpCkrfB--vu0xhmHA1E8QAyy6tMvMPEiDIAfad6Sg/exec" allow="geolocation"></iframe>
 
   <script>
-    window.onload = function() {
-      // 1. GitHub PagesのURLから「?s=〇〇」の店舗名を取得
+    function getOrCreateDeviceId() {
+      const cookieName = 'ofs_device_id=';
+      let id = '';
+
+      try {
+        id = localStorage.getItem('ofs_device_id') || '';
+      } catch (e) {}
+
+      if (!id && document.cookie) {
+        const parts = document.cookie.split(';');
+        for (let i = 0; i < parts.length; i++) {
+          const c = parts[i].trim();
+          if (c.indexOf(cookieName) === 0) {
+            id = decodeURIComponent(c.substring(cookieName.length));
+            break;
+          }
+        }
+      }
+
+      if (!id) {
+        id = 'dev_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 10);
+      }
+
+      try {
+        localStorage.setItem('ofs_device_id', id);
+      } catch (e) {}
+
+      try {
+        document.cookie = 'ofs_device_id=' + encodeURIComponent(id) + '; max-age=31536000; path=/; SameSite=Lax';
+      } catch (e) {}
+
+      return id;
+    }
+
+    function resolveStoreName() {
       const urlParams = new URLSearchParams(window.location.search);
-      let storeName = urlParams.get('s');
+      const fromUrl = urlParams.get('s');
+      let store = '';
 
-      // 2. 基本となるGASのウェブアプリURL
-      const gasBaseUrl = "https://script.google.com/macros/s/AKfycbwrB7SsjK0-0G3IOhrBItOfsl35gJo78lTkBAQkP0hY7xx7q7lv7AtAI6lbiF5cJoxAfg/exec";
+      if (fromUrl) {
+        store = decodeURIComponent(fromUrl).trim();
+        try {
+          localStorage.setItem('gh_saved_store_name', store);
+        } catch (e) {}
+      } else {
+        try {
+          store = localStorage.getItem('gh_saved_store_name') || '';
+        } catch (e) {}
+      }
+      return store;
+    }
 
-      // 3. 店舗パラメータがあればURLに結合、なければそのまま
-      const iframeSrc = storeName ? `${gasBaseUrl}?s=${encodeURIComponent(storeName)}` : gasBaseUrl;
+    const deviceId = getOrCreateDeviceId();
+    const targetStore = resolveStoreName();
 
-      // 4. iframeにURLをセットして表示
-      document.getElementById('timecard-frame').src = iframeSrc;
+    function sendInitToIframe() {
+      const iframe = document.getElementById('timecard-frame');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({
+          type: 'OFS_INIT',
+          storeName: targetStore,
+          deviceId: deviceId
+        }, '*');
+      }
+    }
+
+    window.addEventListener('message', function(event) {
+      if (event.data && event.data.type === 'OFS_READY') {
+        sendInitToIframe();
+      }
+    });
+
+    document.getElementById('timecard-frame').onload = function() {
+      sendInitToIframe();
     };
   </script>
 
